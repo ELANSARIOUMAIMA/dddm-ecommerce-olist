@@ -1,0 +1,13 @@
+# Data files (trop lourds pour GitHub)
+data/raw/*.csv
+data/raw/*.zip
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
