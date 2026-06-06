@@ -1,7 +1,6 @@
 """
 Dashboard décisionnel — Olist Brazilian E-Commerce
 Phase 5 — Data-Driven Decision Making
-5 vues : Direction | Marketing | Opérations | Produits | Modèle IA
 """
 
 import streamlit as st
@@ -11,445 +10,686 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import os
 
-# ── CONFIG PAGE ─────────────────────────────────────────────
+# ── CONFIG ───────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Olist Dashboard — DDDM",
-    page_icon="🛒",
+    page_title="Olist Analytics",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ── CHEMINS ─────────────────────────────────────────────────
+# ── CSS GLOBAL ───────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+/* Reset & base */
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+    color: #e2e8f0;
+}
+
+.stApp {
+    background-color: #0f1117;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #161b27 !important;
+    border-right: 1px solid #1e2535;
+}
+
+[data-testid="stSidebar"] * {
+    color: #94a3b8 !important;
+}
+
+[data-testid="stSidebar"] .stRadio label {
+    color: #94a3b8 !important;
+    font-size: 13px !important;
+    padding: 6px 0 !important;
+}
+
+[data-testid="stSidebar"] .stRadio [data-checked="true"] label {
+    color: #f1f5f9 !important;
+    font-weight: 500 !important;
+}
+
+/* Titres */
+h1 {
+    font-size: 22px !important;
+    font-weight: 600 !important;
+    color: #f1f5f9 !important;
+    letter-spacing: -0.3px !important;
+    margin-bottom: 2px !important;
+}
+
+h2 {
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    color: #cbd5e1 !important;
+    letter-spacing: 0px !important;
+}
+
+h3 {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+}
+
+/* Metric cards */
+[data-testid="stMetric"] {
+    background: #161b27;
+    border: 1px solid #1e2535;
+    border-radius: 10px;
+    padding: 18px 20px !important;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    color: #64748b !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+}
+
+[data-testid="stMetricValue"] {
+    font-size: 26px !important;
+    font-weight: 600 !important;
+    color: #f1f5f9 !important;
+    font-family: 'DM Mono', monospace !important;
+}
+
+[data-testid="stMetricDelta"] {
+    font-size: 11px !important;
+}
+
+/* Divider */
+hr {
+    border: none;
+    border-top: 1px solid #1e2535 !important;
+    margin: 18px 0 !important;
+}
+
+/* Dataframe */
+[data-testid="stDataFrame"] {
+    background: #161b27 !important;
+    border: 1px solid #1e2535 !important;
+    border-radius: 10px !important;
+}
+
+/* Slider */
+[data-testid="stSlider"] * {
+    color: #94a3b8 !important;
+}
+
+/* Expander */
+[data-testid="stExpander"] {
+    background: #161b27 !important;
+    border: 1px solid #1e2535 !important;
+    border-radius: 8px !important;
+}
+
+/* Info / success / warning boxes */
+[data-testid="stAlert"] {
+    border-radius: 8px !important;
+    border: 1px solid #1e2535 !important;
+    font-size: 13px !important;
+}
+
+/* Caption */
+.stCaption {
+    color: #475569 !important;
+    font-size: 11px !important;
+}
+
+/* Remove padding top */
+.block-container {
+    padding-top: 56px !important;
+    padding-bottom: 40px !important;
+}
+
+/* Tabs */
+button[data-baseweb="tab"] {
+    font-size: 13px !important;
+    color: #64748b !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── PLOTLY THEME ──────────────────────────────────────────────
+PLOTLY_LAYOUT = dict(
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)',
+    font=dict(family='DM Sans', color='#94a3b8', size=12),
+    margin=dict(l=8, r=8, t=32, b=8),
+    xaxis=dict(
+        gridcolor='#1e2535',
+        linecolor='#1e2535',
+        tickcolor='#1e2535',
+        zerolinecolor='#1e2535',
+    ),
+    yaxis=dict(
+        gridcolor='#1e2535',
+        linecolor='#1e2535',
+        tickcolor='#1e2535',
+        zerolinecolor='#1e2535',
+    ),
+    legend=dict(
+        bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#94a3b8', size=12),
+        orientation='h',
+        yanchor='bottom',
+        y=1.02
+    ),
+    coloraxis_colorbar=dict(
+        tickfont=dict(color='#94a3b8'),
+        titlefont=dict(color='#94a3b8')
+    )
+)
+
+# Palette
+C = {
+    'blue':    '#3b82f6',
+    'green':   '#22c55e',
+    'amber':   '#f59e0b',
+    'red':     '#ef4444',
+    'slate':   '#64748b',
+    'indigo':  '#6366f1',
+    'teal':    '#14b8a6',
+    'Très Fidèles':  '#22c55e',
+    'Fidèles':       '#3b82f6',
+    'À Réactiver':   '#f59e0b',
+    'Perdus':        '#ef4444',
+}
+
+# ── CHEMINS ───────────────────────────────────────────────────
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'processed')
 
-# ── CHARGEMENT DES DONNÉES (mise en cache) ───────────────────
+# ── CHARGEMENT ────────────────────────────────────────────────
 @st.cache_data
-def load_kpis():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_kpis.csv'))
+def load_all():
+    kpis       = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_kpis.csv')).iloc[0]
+    monthly    = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_monthly.csv'))
+    rfm_seg    = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_rfm_segments.csv'))
+    rfm_prof   = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_rfm_profile.csv'))
+    categories = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_categories.csv'))
+    geo        = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_geo.csv'))
+    shap_df    = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_shap_importance.csv'))
+    models_df  = pd.read_csv(os.path.join(DATA_DIR, 'dashboard_model_comparison.csv'))
+    return kpis, monthly, rfm_seg, rfm_prof, categories, geo, shap_df, models_df
 
-@st.cache_data
-def load_monthly():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_monthly.csv'))
+kpis, monthly, rfm_seg, rfm_prof, categories, geo, shap_df, models_df = load_all()
 
-@st.cache_data
-def load_rfm_segments():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_rfm_segments.csv'))
-
-@st.cache_data
-def load_rfm_profile():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_rfm_profile.csv'))
-
-@st.cache_data
-def load_categories():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_categories.csv'))
-
-@st.cache_data
-def load_geo():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_geo.csv'))
-
-@st.cache_data
-def load_shap():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_shap_importance.csv'))
-
-@st.cache_data
-def load_models():
-    return pd.read_csv(os.path.join(DATA_DIR, 'dashboard_model_comparison.csv'))
-
-kpis       = load_kpis().iloc[0]
-monthly    = load_monthly()
-rfm_seg    = load_rfm_segments()
-rfm_prof   = load_rfm_profile()
-categories = load_categories()
-geo        = load_geo()
-shap_df    = load_shap()
-models_df  = load_models()
-
-# ── PALETTE COULEURS ─────────────────────────────────────────
-COLORS = {
-    'primary':   '#2563EB',
-    'success':   '#16A34A',
-    'warning':   '#D97706',
-    'danger':    '#DC2626',
-    'neutral':   '#6B7280',
-    'Champions': '#16A34A',
-    'Fidèles':   '#2563EB',
-    'À risque':  '#D97706',
-    'Inactifs':  '#DC2626',
+# ── Traduction catégories produits EN → FR ────────────────────
+CAT_FR = {
+    'health_beauty':              'Santé & Beauté',
+    'bed_bath_table':             'Literie & Bain',
+    'sports_leisure':             'Sports & Loisirs',
+    'furniture_decor':            'Meubles & Déco',
+    'computers_accessories':      'Informatique',
+    'housewares':                 'Articles Ménagers',
+    'watches_gifts':              'Montres & Cadeaux',
+    'telephony':                  'Téléphonie',
+    'garden_tools':               'Jardinage',
+    'auto':                       'Auto & Moto',
+    'toys':                       'Jouets',
+    'cool_stuff':                 'Tendances',
+    'perfumery':                  'Parfumerie',
+    'baby':                       'Puériculture',
+    'electronics':                'Électronique',
+    'stationery':                 'Papeterie',
+    'fashion_bags_accessories':   'Sacs & Accessoires',
+    'office_furniture':           'Mobilier Bureau',
+    'books_general_interest':     'Livres',
+    'food_drink':                 'Alimentation',
+    'musical_instruments':        'Instruments Musique',
+    'construction_tools_safety':  'Bricolage & Sécurité',
+    'pet_shop':                   'Animalerie',
+    'art':                        'Art',
+    'home_appliances':            'Électroménager',
+    'kitchen_dining_laundry_garden_furniture': 'Cuisine & Jardin',
+    'luggage_accessories':        'Bagagerie',
+    'fashion_male_clothing':      'Mode Homme',
+    'fashion_female_clothing':    'Mode Femme',
+    'small_appliances':           'Petit Électroménager',
+    'consoles_games':             'Consoles & Jeux',
+    'audio':                      'Audio',
+    'books_technical':            'Livres Techniques',
+    'party_supplies':             'Fêtes & Événements',
+    'market_place':               'Marketplace',
+    'home_comfort':               'Confort Maison',
+    'fixed_telephony':            'Téléphonie Fixe',
+    'industry_commerce_and_business': 'Commerce & Industrie',
+    'drinks':                     'Boissons',
+    'fashion_shoes':              'Chaussures',
+    'agro_industry_and_commerce': 'Agro-Industrie',
+    'tablets_printing_image':     'Tablettes & Photo',
+    'la_cuisine':                 'Cuisine',
+    'fashion_underwear_beach':    'Lingerie & Plage',
+    'fashion_sport':              'Mode Sport',
+    'home_comfort_2':             'Confort Maison 2',
+    'flowers':                    'Fleurs',
+    'christmas_supplies':         'Noël',
+    'food':                       'Alimentation',
+    'diapers_and_hygiene':        'Hygiène & Couches',
+    'dvds_blu_ray':               'DVD & Blu-ray',
+    'cine_photo':                 'Cinéma & Photo',
+    'other':                      'Autres',
 }
-SEG_ORDER = ['Champions', 'Fidèles', 'À risque', 'Inactifs']
 
-# ── SIDEBAR ──────────────────────────────────────────────────
-VUE_LABELS = [
-    "Direction",
-    "Marketing",
-    "Operations",
-    "Produits",
-    "Modele IA",
-]
+def translate_cat(name):
+    if not isinstance(name, str):
+        return name
+    return CAT_FR.get(name.lower(), name.replace('_', ' ').title())
 
+categories['product_category_name_english'] = (
+    categories['product_category_name_english'].apply(translate_cat)
+)
+
+# ── Renommage des segments dans les dataframes ────────────────
+# Les CSV stockent encore les anciens noms produits par le notebook Phase 3
+SEG_RENAME = {
+    'Champions': 'Très Fidèles',
+    'Fidèles':   'Fidèles',
+    'À risque':  'À Réactiver',
+    'Inactifs':  'Perdus',
+}
+rfm_prof['segment'] = rfm_prof['segment'].map(SEG_RENAME).fillna(rfm_prof['segment'])
+rfm_seg['segment']  = rfm_seg['segment'].map(SEG_RENAME).fillna(rfm_seg['segment'])
+
+SEG_ORDER = ['Très Fidèles', 'Fidèles', 'À Réactiver', 'Perdus']
+
+# ── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## Olist Dashboard")
-    st.markdown("**Data-Driven Decision Making**")
-    st.markdown("---")
-    vue_idx = st.radio(
-        "Choisir une vue",
-        options=list(range(len(VUE_LABELS))),
-        format_func=lambda i: [
-            "📊 Direction — KPIs Globaux",
-            "👥 Marketing — Segments Clients",
-            "🚚 Operations — Livraisons",
-            "📦 Produits — Categories",
-            "🤖 Modele IA — Predictions",
-        ][i],
-        index=0
+    st.markdown(
+        "<div style='padding:8px 0 20px 0'>"
+        "<div style='font-size:18px;font-weight:600;color:#f1f5f9;letter-spacing:-0.3px'>Olist Analytics</div>"
+        "<div style='font-size:11px;color:#475569;margin-top:2px'>Brazilian E-Commerce · 2016–2018</div>"
+        "</div>",
+        unsafe_allow_html=True
     )
-    st.markdown("---")
-    st.markdown("**Dataset** : Olist 2016-2018")
-    st.markdown(f"**Commandes** : {int(kpis['nb_commandes']):,}")
-    st.markdown(f"**Clients** : {int(kpis['nb_clients_uniques']):,}")
-    st.markdown("---")
-    st.caption("Phase 5 — DDDM Project")
+
+    st.markdown(
+        "<div style='font-size:10px;font-weight:500;color:#475569;"
+        "text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px'>Navigation</div>",
+        unsafe_allow_html=True
+    )
+
+    vue_idx = st.radio(
+        "Navigation",
+        options=list(range(5)),
+        format_func=lambda i: [
+            "Direction — KPIs Globaux",
+            "Marketing — Segments Clients",
+            "Opérations — Livraisons",
+            "Produits — Catégories",
+            "Modèle IA — Prédictions",
+        ][i],
+        index=0,
+        label_visibility="collapsed"
+    )
+
+    st.markdown("<div style='margin-top:24px'></div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='font-size:11px;color:#334155;line-height:2'>"
+        f"Commandes &nbsp;<span style='color:#64748b;font-family:DM Mono,monospace'>{int(kpis['nb_commandes']):,}</span><br>"
+        f"Clients &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#64748b;font-family:DM Mono,monospace'>{int(kpis['nb_clients_uniques']):,}</span><br>"
+        f"Période &nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#64748b'>2016 – 2018</span>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        "<div style='position:absolute;bottom:20px;font-size:10px;color:#1e2535'></div>",
+        unsafe_allow_html=True
+    )
+
+
+# ── HELPER : card HTML ────────────────────────────────────────
+def card(content_html, padding="18px 20px"):
+    st.markdown(
+        f"<div style='background:#161b27;border:1px solid #1e2535;"
+        f"border-radius:10px;padding:{padding};margin-bottom:0'>"
+        f"{content_html}</div>",
+        unsafe_allow_html=True
+    )
+
+def section(title):
+    st.markdown(
+        f"<div style='font-size:14px;font-weight:600;color:#cbd5e1;"
+        f"letter-spacing:-0.2px;margin:32px 0 14px 0;"
+        f"padding-bottom:8px;border-bottom:1px solid #1e2535'>{title}</div>",
+        unsafe_allow_html=True
+    )
+
+def page_header(title, subtitle=""):
+    st.markdown(
+        f"<div style='margin-bottom:28px'>"
+        f"<div style='font-size:22px;font-weight:600;color:#f1f5f9;"
+        f"letter-spacing:-0.4px'>{title}</div>"
+        f"<div style='font-size:13px;color:#64748b;margin-top:4px'>{subtitle}</div>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
+def apply_layout(fig, height=380, extra=None):
+    layout = dict(PLOTLY_LAYOUT)
+    layout['height'] = height
+    if extra:
+        layout.update(extra)
+    fig.update_layout(**layout)
+    return fig
+
 
 # ════════════════════════════════════════════════════════════
-# VUE 1 — DIRECTION : KPIs GLOBAUX
+# VUE 0 — DIRECTION
 # ════════════════════════════════════════════════════════════
 if vue_idx == 0:
 
-    st.title("📊 Vue Direction — KPIs Globaux")
-    st.markdown("Tableau de bord exécutif — performance globale de la plateforme Olist (2016–2018)")
-    st.markdown("---")
+    page_header(
+        "Performance Globale",
+        "Tableau de bord exécutif — KPIs primaires et secondaires"
+    )
 
-    # ── Ligne 1 : 4 métriques principales ───────────────────
+    # ── KPIs row 1 ──────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("Chiffre d'Affaires", f"R$ {kpis['ca_total']:,.0f}")
+    with c2:
+        st.metric("Panier Moyen (AOV)", f"R$ {kpis['aov']:.2f}",
+                  delta="Cible R$ 150")
+    with c3:
+        score = kpis['review_score_moyen']
+        st.metric("Score Satisfaction", f"{score:.2f} / 5",
+                  delta="Cible 4.0",
+                  delta_color="normal" if score >= 4.0 else "inverse")
+    with c4:
+        ret = kpis['taux_retention']
+        st.metric("Taux de Rétention", f"{ret:.1f}%",
+                  delta="Cible 15%",
+                  delta_color="normal" if ret >= 15 else "inverse")
 
-    c1.metric(
-        label="💰 Chiffre d'Affaires Total",
-        value=f"R$ {kpis['ca_total']:,.0f}",
-        help="Somme de tous les paiements sur commandes livrées"
-    )
-    c2.metric(
-        label="🛍️ Panier Moyen (AOV)",
-        value=f"R$ {kpis['aov']:.2f}",
-        delta="Cible : R$ 150",
-        delta_color="normal",
-        help="Valeur moyenne par commande livrée"
-    )
-    c3.metric(
-        label="⭐ Score Satisfaction Moyen",
-        value=f"{kpis['review_score_moyen']:.2f} / 5",
-        delta=f"{'✅ Cible atteinte' if kpis['review_score_moyen'] >= 4.0 else '⚠️ Cible : 4.0'}",
-        delta_color="normal",
-        help="Moyenne des notes laissées par les clients"
-    )
-    c4.metric(
-        label="🔄 Taux de Rétention",
-        value=f"{kpis['taux_retention']:.1f}%",
-        delta="Cible : 15%",
-        delta_color="normal",
-        help="Part des clients ayant commandé plus d'une fois"
-    )
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-    st.markdown("&nbsp;")
-
-    # ── Ligne 2 : 4 métriques secondaires ───────────────────
     c5, c6, c7, c8 = st.columns(4)
+    with c5:
+        st.metric("Commandes Livrées", f"{int(kpis['nb_commandes']):,}")
+    with c6:
+        st.metric("Clients Uniques", f"{int(kpis['nb_clients_uniques']):,}")
+    with c7:
+        ontime = kpis['taux_livraison_temps']
+        st.metric("Livraisons à Temps", f"{ontime:.1f}%",
+                  delta="Cible 90%",
+                  delta_color="normal" if ontime >= 90 else "inverse")
+    with c8:
+        cancel = kpis['taux_annulation']
+        st.metric("Taux d'Annulation", f"{cancel:.1f}%",
+                  delta="Cible < 3%",
+                  delta_color="inverse" if cancel > 3 else "normal")
 
-    c5.metric(
-        label="📦 Commandes Livrées",
-        value=f"{int(kpis['nb_commandes']):,}",
-    )
-    c6.metric(
-        label="👥 Clients Uniques",
-        value=f"{int(kpis['nb_clients_uniques']):,}",
-    )
-    c7.metric(
-        label="🚚 Livraisons dans les Délais",
-        value=f"{kpis['taux_livraison_temps']:.1f}%",
-        delta=f"{'✅ Cible atteinte' if kpis['taux_livraison_temps'] >= 90 else '⚠️ Cible : 90%'}",
-        delta_color="normal",
-    )
-    c8.metric(
-        label="❌ Taux d'Annulation",
-        value=f"{kpis['taux_annulation']:.1f}%",
-        delta=f"{'✅ OK' if kpis['taux_annulation'] <= 3 else '⚠️ Cible : < 3%'}",
-        delta_color="inverse",
-    )
+    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
-    st.markdown("---")
+    # ── Graphiques principaux ────────────────────────────────
+    col_l, col_r = st.columns([3, 2])
 
-    # ── Graphique : Évolution mensuelle CA + commandes ───────
-    col_left, col_right = st.columns([2, 1])
-
-    with col_left:
-        st.subheader("📈 Évolution Mensuelle — CA & Volume Commandes")
-
+    with col_l:
+        section("Évolution Mensuelle")
         fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-        fig.add_trace(
-            go.Bar(
-                x=monthly['order_month'],
-                y=monthly['ca'],
-                name="CA (BRL)",
-                marker_color=COLORS['primary'],
-                opacity=0.75
-            ),
-            secondary_y=False
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=monthly['order_month'],
-                y=monthly['nb_commandes'],
-                name="Nb Commandes",
-                line=dict(color=COLORS['warning'], width=2.5),
-                mode='lines+markers',
-                marker=dict(size=5)
-            ),
-            secondary_y=True
-        )
-
-        fig.update_layout(
-            height=380,
-            hovermode='x unified',
-            legend=dict(orientation='h', yanchor='bottom', y=1.02),
-            margin=dict(l=10, r=10, t=30, b=60),
-            xaxis=dict(tickangle=-45)
-        )
-        fig.update_yaxes(title_text="CA (BRL)", secondary_y=False)
-        fig.update_yaxes(title_text="Nb Commandes", secondary_y=True)
-
+        fig.add_trace(go.Bar(
+            x=monthly['order_month'], y=monthly['ca'],
+            name="CA (BRL)",
+            marker_color=C['blue'],
+            marker_opacity=0.8,
+        ), secondary_y=False)
+        fig.add_trace(go.Scatter(
+            x=monthly['order_month'], y=monthly['nb_commandes'],
+            name="Commandes",
+            line=dict(color=C['amber'], width=2),
+            mode='lines+markers',
+            marker=dict(size=4)
+        ), secondary_y=True)
+        fig.update_xaxes(tickangle=-45, tickfont=dict(size=10))
+        fig.update_yaxes(title_text="CA (BRL)", secondary_y=False,
+                         title_font=dict(size=11))
+        fig.update_yaxes(title_text="Commandes", secondary_y=True,
+                         title_font=dict(size=11))
+        apply_layout(fig, height=340,
+                     extra={'hovermode': 'x unified',
+                            'margin': dict(l=8, r=8, t=16, b=60)})
         st.plotly_chart(fig, use_container_width=True)
 
-    with col_right:
-        st.subheader("📋 KPI Tree")
-        st.markdown("""
-        ```
-        CA Total
-        ├── AOV (Panier Moyen)
-        │   ├── Prix moyen produit
-        │   └── Frais de port
-        ├── Volume Commandes
-        │   ├── Nouveaux clients
-        │   └── Clients récurrents
-        └── Satisfaction (NPS)
-            ├── Délai de livraison
-            └── Taux de retard
-        ```
-        """)
-        st.markdown("---")
-        st.markdown("**Business Case :**")
-        st.info(
-            "96% des clients n'achètent qu'une seule fois. "
-            "Améliorer la rétention de +5% génère "
-            "**+8 à 12% de CA** sur 12 mois."
+    with col_r:
+        section("Contexte & Enjeux")
+        card(
+            "<div style='font-size:12px;color:#64748b;line-height:1.9'>"
+            "<span style='font-family:DM Mono,monospace;color:#3b82f6;font-size:13px'>96%</span>"
+            " des clients n'achetent qu'une seule fois<br>"
+            "<span style='font-family:DM Mono,monospace;color:#f59e0b;font-size:13px'>10%</span>"
+            " des commandes sont livrees en retard<br>"
+            "<span style='font-family:DM Mono,monospace;color:#22c55e;font-size:13px'>+8–12%</span>"
+            " de CA projete sur 12 mois si retention +5%"
+            "</div>",
+            padding="20px 22px"
         )
 
-    # ── Graphique : Score moyen et taux retard par mois ─────
-    st.subheader("📉 Satisfaction & Retards — Évolution Mensuelle")
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
+        section("Arbre des KPIs")
+        card(
+            "<div style='font-size:11px;color:#64748b;"
+            "font-family:DM Mono,monospace;line-height:2.1'>"
+            "<span style='color:#94a3b8'>CA Total</span><br>"
+            "&nbsp;&nbsp;├── <span style='color:#3b82f6'>Panier Moyen (AOV) (AOV)</span><br>"
+            "&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├── Prix produit<br>"
+            "&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└── Frais de port<br>"
+            "&nbsp;&nbsp;├── <span style='color:#3b82f6'>Volume Commandes</span><br>"
+            "&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├── Nouveaux clients<br>"
+            "&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└── Clients recurrents<br>"
+            "&nbsp;&nbsp;└── <span style='color:#3b82f6'>Satisfaction</span><br>"
+            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── Delai livraison<br>"
+            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── Taux de retard"
+            "</div>",
+            padding="18px 20px"
+        )
+
+    # ── Satisfaction mensuelle ───────────────────────────────
+    section("Satisfaction & Retards — Évolution Mensuelle")
     fig2 = make_subplots(specs=[[{"secondary_y": True}]])
-
-    fig2.add_trace(
-        go.Scatter(
-            x=monthly['order_month'],
-            y=monthly['review_moyen'],
-            name="Score Avis Moyen",
-            line=dict(color=COLORS['success'], width=2.5),
-            mode='lines+markers',
-            marker=dict(size=5)
-        ),
-        secondary_y=False
-    )
-    fig2.add_trace(
-        go.Scatter(
-            x=monthly['order_month'],
-            y=monthly['taux_retard'],
-            name="Taux de Retard (%)",
-            line=dict(color=COLORS['danger'], width=2.5, dash='dot'),
-            mode='lines+markers',
-            marker=dict(size=5)
-        ),
-        secondary_y=True
-    )
-
+    fig2.add_trace(go.Scatter(
+        x=monthly['order_month'], y=monthly['review_moyen'],
+        name="Score Moyen",
+        line=dict(color=C['green'], width=2),
+        mode='lines+markers', marker=dict(size=4)
+    ), secondary_y=False)
+    fig2.add_trace(go.Scatter(
+        x=monthly['order_month'], y=monthly['taux_retard'],
+        name="Taux Retard (%)",
+        line=dict(color=C['red'], width=2, dash='dot'),
+        mode='lines+markers', marker=dict(size=4)
+    ), secondary_y=True)
     fig2.add_hline(
-        y=4.0, line_dash="dash", line_color=COLORS['success'],
-        annotation_text="Cible score ≥ 4.0",
-        annotation_position="top left",
+        y=4.0, line_dash="dash",
+        line_color="#22c55e", opacity=0.4,
+        annotation_text="Cible 4.0",
+        annotation_font=dict(color="#22c55e", size=10),
         secondary_y=False
     )
-
-    fig2.update_layout(
-        height=320,
-        hovermode='x unified',
-        legend=dict(orientation='h', yanchor='bottom', y=1.02),
-        margin=dict(l=10, r=10, t=30, b=60),
-        xaxis=dict(tickangle=-45)
-    )
-    fig2.update_yaxes(title_text="Score Moyen (1–5)", secondary_y=False, range=[3, 5])
-    fig2.update_yaxes(title_text="Taux de Retard (%)", secondary_y=True)
-
+    fig2.update_xaxes(tickangle=-45, tickfont=dict(size=10))
+    fig2.update_yaxes(title_text="Score (1-5)", secondary_y=False,
+                      range=[3, 5.2], title_font=dict(size=11))
+    fig2.update_yaxes(title_text="Retard (%)", secondary_y=True,
+                      title_font=dict(size=11))
+    apply_layout(fig2, height=300,
+                 extra={'hovermode': 'x unified',
+                        'margin': dict(l=8, r=8, t=16, b=60)})
     st.plotly_chart(fig2, use_container_width=True)
 
 
 # ════════════════════════════════════════════════════════════
-# VUE 2 — MARKETING : SEGMENTS CLIENTS RFM
+# VUE 1 — MARKETING
 # ════════════════════════════════════════════════════════════
 elif vue_idx == 1:
 
-    st.title("👥 Vue Marketing — Segmentation Clients RFM")
-    st.markdown("Segmentation en 4 catégories basée sur la Récence, Fréquence et Valeur monétaire")
-    st.markdown("---")
+    page_header(
+        "Segmentation Clients",
+        "Analyse RFM — Récence, Fréquence, Valeur Monétaire"
+    )
 
-    # ── Cartes profil par segment ────────────────────────────
-    st.subheader("Profil des 4 Segments")
+    # ── Cartes segments ─────────────────────────────────────
+    section("Profil des 4 Segments")
     cols = st.columns(4)
 
-    icons = {'Champions': '🏆', 'Fidèles': '💙', 'À risque': '⚠️', 'Inactifs': '😴'}
     actions = {
-        'Champions':  'Récompenser · Programme VIP · Upsell',
-        'Fidèles':    'Fidéliser · Cross-sell · NPS',
-        'À risque':   'Réactiver · Promo ciblée · Email win-back',
-        'Inactifs':   'Campagne réactivation · Dernière chance',
+        'Très Fidèles': 'Programme VIP · Récompenses · Parrainage',
+        'Fidèles':      'Cross-sell · Enquête satisfaction · Accès anticipé',
+        'À Réactiver':  'Email win-back · Promotion -15% · Urgence',
+        'Perdus':       'Campagne réactivation · Offre dernière chance',
+    }
+    descriptions = {
+        'Très Fidèles': 'Acheteurs récents, fréquents et à haute valeur.',
+        'Fidèles':      'Plusieurs achats, bonne valeur, engagement correct.',
+        'À Réactiver':  'Bons clients devenus inactifs depuis trop longtemps.',
+        'Perdus':       'Un seul achat, faible valeur, peu de potentiel.',
     }
 
     for col, (_, row) in zip(cols, rfm_prof.iterrows()):
         seg = row['segment']
+        color = C[seg]
         with col:
-            st.markdown(f"""
-            <div style="
-                border: 1.5px solid {COLORS[seg]};
-                border-radius: 10px;
-                padding: 14px;
-                text-align: center;
-                margin-bottom: 8px;
-            ">
-                <div style="font-size: 28px">{icons[seg]}</div>
-                <div style="font-weight: 600; font-size: 16px; color: {COLORS[seg]}">{seg}</div>
-                <div style="font-size: 13px; color: grey; margin: 6px 0">
-                    {int(row['nb_clients']):,} clients ({row['pct_clients']:.1f}%)<br>
-                    Revenue : {row['pct_revenue']:.1f}% du total<br>
-                    Panier moy. : R$ {row['monetary_moy']:.0f}<br>
-                    Récence moy. : {row['recency_moy']:.0f}j
-                </div>
-                <div style="font-size: 11px; color: {COLORS[seg]}; font-style: italic">
-                    {actions[seg]}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='background:#161b27;border:1px solid #1e2535;"
+                f"border-top:2px solid {color};border-radius:10px;"
+                f"padding:18px 16px;height:100%'>"
+                f"<div style='font-size:13px;font-weight:600;color:{color};"
+                f"margin-bottom:6px'>{seg}</div>"
+                f"<div style='font-size:11px;color:#475569;margin-bottom:12px'>"
+                f"{descriptions[seg]}</div>"
+                f"<div style='font-family:DM Mono,monospace;font-size:12px;"
+                f"color:#94a3b8;line-height:2'>"
+                f"<span style='color:#475569'>Clients</span>&nbsp;&nbsp;"
+                f"{int(row['nb_clients']):,}"
+                f"&nbsp;<span style='color:#334155'>({row['pct_clients']:.1f}%)</span><br>"
+                f"<span style='color:#475569'>Revenue</span>&nbsp;"
+                f"{row['pct_revenue']:.1f}% total<br>"
+                f"<span style='color:#475569'>Panier</span>&nbsp;&nbsp;&nbsp;"
+                f"R$ {row['monetary_moy']:.0f}<br>"
+                f"<span style='color:#475569'>Recence</span>&nbsp;"
+                f"{row['recency_moy']:.0f}j"
+                f"</div>"
+                f"<div style='margin-top:12px;padding-top:10px;"
+                f"border-top:1px solid #1e2535;font-size:10px;"
+                f"color:#334155'>{actions[seg]}</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
-    st.markdown("---")
+    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
     col_a, col_b = st.columns(2)
 
-    # ── Donut : répartition clients ──────────────────────────
+    # ── Donut ────────────────────────────────────────────────
     with col_a:
-        st.subheader("Répartition des Clients par Segment")
-
-        fig_donut = go.Figure(go.Pie(
+        section("Répartition des Clients par Segment")
+        fig_d = go.Figure(go.Pie(
             labels=rfm_prof['segment'],
             values=rfm_prof['nb_clients'],
-            hole=0.55,
-            marker_colors=[COLORS[s] for s in rfm_prof['segment']],
-            textinfo='label+percent',
+            hole=0.62,
+            marker_colors=[C[s] for s in rfm_prof['segment']],
+            textinfo='percent',
+            textfont=dict(size=12, color='#0f1117'),
             hovertemplate='%{label}<br>%{value:,} clients<br>%{percent}<extra></extra>',
             sort=False
         ))
-        fig_donut.update_layout(
-            height=380,
-            showlegend=False,
-            margin=dict(l=10, r=10, t=30, b=10),
-            annotations=[dict(
-                text=f"{int(rfm_prof['nb_clients'].sum()):,}<br>clients",
-                x=0.5, y=0.5, font_size=16, showarrow=False
-            )]
+        total = int(rfm_prof['nb_clients'].sum())
+        fig_d.add_annotation(
+            text=f"<b>{total:,}</b><br><span style='font-size:10px'>clients</span>",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16, color='#f1f5f9')
         )
-        st.plotly_chart(fig_donut, use_container_width=True)
+        apply_layout(fig_d, height=340,
+                     extra={'showlegend': True,
+                            'margin': dict(l=8, r=8, t=16, b=8)})
+        st.plotly_chart(fig_d, use_container_width=True)
 
-    # ── Bar : revenue par segment ────────────────────────────
+    # ── Revenue ──────────────────────────────────────────────
     with col_b:
-        st.subheader("Revenue Total par Segment")
-
-        fig_bar = go.Figure(go.Bar(
+        section("Chiffre d'Affaires par Segment")
+        fig_b = go.Figure(go.Bar(
             x=rfm_prof['segment'],
             y=rfm_prof['monetary_total'],
-            marker_color=[COLORS[s] for s in rfm_prof['segment']],
+            marker_color=[C[s] for s in rfm_prof['segment']],
+            marker_opacity=0.85,
             text=[f"R$ {v:,.0f}" for v in rfm_prof['monetary_total']],
             textposition='outside',
+            textfont=dict(size=11, color='#94a3b8'),
             hovertemplate='%{x}<br>R$ %{y:,.0f}<extra></extra>'
         ))
-        fig_bar.update_layout(
-            height=380,
-            yaxis_title="Revenue Total (BRL)",
-            margin=dict(l=10, r=10, t=30, b=10),
-            showlegend=False
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        apply_layout(fig_b, height=340,
+                     extra={'showlegend': False,
+                            'yaxis': dict(
+                                title="Chiffre d'affaires (BRL)",
+                                gridcolor='#1e2535',
+                                title_font=dict(size=11)
+                            ),
+                            'margin': dict(l=8, r=8, t=16, b=8)})
+        st.plotly_chart(fig_b, use_container_width=True)
 
     # ── Scatter RFM ──────────────────────────────────────────
-    st.subheader("Scatter RFM — Récence vs Valeur (échantillon 3 000 clients)")
-
+    section("Distribution RFM — Récence vs Valeur (échantillon 3 000 clients)")
     rfm_sample = rfm_seg.sample(min(3000, len(rfm_seg)), random_state=42)
-
-    fig_scatter = px.scatter(
-        rfm_sample,
-        x='recency',
-        y='monetary',
+    fig_s = px.scatter(
+        rfm_sample, x='recency', y='monetary',
         color='segment',
-        color_discrete_map=COLORS,
-        opacity=0.55,
-        size_max=8,
+        color_discrete_map=C,
+        opacity=0.5,
         labels={
             'recency':  'Récence (jours depuis dernier achat)',
             'monetary': 'Valeur totale dépensée (BRL)',
-            'segment':  'Segment'
+            'segment':  'Segment client'
         },
         category_orders={'segment': SEG_ORDER},
         hover_data=['frequency']
     )
-    fig_scatter.update_traces(marker=dict(size=5))
-    fig_scatter.update_layout(
-        height=420,
-        margin=dict(l=10, r=10, t=30, b=10)
-    )
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    fig_s.update_traces(marker=dict(size=5))
+    apply_layout(fig_s, height=400,
+                 extra={'margin': dict(l=8, r=8, t=16, b=8)})
+    st.plotly_chart(fig_s, use_container_width=True)
 
 
 # ════════════════════════════════════════════════════════════
-# VUE 3 — OPÉRATIONS : LIVRAISONS
+# VUE 2 — OPERATIONS
 # ════════════════════════════════════════════════════════════
 elif vue_idx == 2:
 
-    st.title("🚚 Vue Opérations — Performance des Livraisons")
-    st.markdown("Analyse des délais, retards et satisfaction par région géographique")
-    st.markdown("---")
+    page_header(
+        "Performance Logistique",
+        "Analyse des délais et retards de livraison par région"
+    )
 
-    # ── KPIs opérationnels ───────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("🚚 Livraisons à temps",
-              f"{kpis['taux_livraison_temps']:.1f}%",
-              delta="Cible ≥ 90%",
-              delta_color="normal")
-    c2.metric("⏱️ Délai médian livraison",
-              f"{kpis['delai_moyen_jours']:.0f} jours")
-    c3.metric("⭐ Score moyen (avis)",
-              f"{kpis['review_score_moyen']:.2f} / 5")
-    c4.metric("📦 Commandes analysées",
-              f"{int(kpis['nb_commandes']):,}")
+    with c1:
+        ontime = kpis['taux_livraison_temps']
+        st.metric("Livraisons à Temps", f"{ontime:.1f}%",
+                  delta="Cible 90%",
+                  delta_color="normal" if ontime >= 90 else "inverse")
+    with c2:
+        st.metric("Délai Médian", f"{kpis['delai_moyen_jours']:.0f} jours")
+    with c3:
+        st.metric("Score Satisfaction", f"{kpis['review_score_moyen']:.2f} / 5")
+    with c4:
+        st.metric("Commandes Analysées", f"{int(kpis['nb_commandes']):,}")
 
-    st.markdown("---")
+    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
-    col_left, col_right = st.columns(2)
+    col_l, col_r = st.columns(2)
 
-    # ── Carte bulle : retard par état ────────────────────────
-    with col_left:
-        st.subheader("🗺️ Taux de Retard par État (Brésil)")
-
+    with col_l:
+        section("Taux de Retard par État (Brésil)")
         geo_clean = geo.dropna(subset=['lat', 'lon'])
-
         fig_map = px.scatter_geo(
-            geo_clean,
-            lat='lat',
-            lon='lon',
+            geo_clean, lat='lat', lon='lon',
             size='nb_commandes',
             color='taux_retard',
             hover_name='customer_state',
@@ -458,223 +698,251 @@ elif vue_idx == 2:
                 'taux_retard': ':.1f',
                 'delai_moyen': ':.1f',
                 'review_moyen': ':.2f',
-                'lat': False,
-                'lon': False
+                'lat': False, 'lon': False
             },
-            color_continuous_scale='RdYlGn_r',
-            size_max=40,
+            color_continuous_scale=[
+                [0, '#22c55e'], [0.5, '#f59e0b'], [1, '#ef4444']
+            ],
+            size_max=38,
             scope='south america',
             labels={
-                'taux_retard':   'Taux retard (%)',
-                'nb_commandes':  'Nb commandes',
-                'delai_moyen':   'Délai moyen (j)',
-                'review_moyen':  'Score moyen'
-            },
-            title=""
+                'taux_retard':  'Taux de retard (%)',
+                'nb_commandes': 'Nb commandes',
+                'delai_moyen':  'Délai moyen (j)',
+                'review_moyen': 'Score satisfaction'
+            }
         )
         fig_map.update_layout(
+            **{k: v for k, v in PLOTLY_LAYOUT.items()
+               if k not in ['xaxis', 'yaxis', 'margin']},
             height=420,
-            margin=dict(l=0, r=0, t=10, b=0),
-            coloraxis_colorbar=dict(title="Retard (%)")
+            margin=dict(l=0, r=0, t=16, b=0),
+            geo=dict(
+                bgcolor='rgba(0,0,0,0)',
+                landcolor='#161b27',
+                oceancolor='#0f1117',
+                lakecolor='#0f1117',
+                coastlinecolor='#1e2535',
+                countrycolor='#1e2535',
+            )
         )
         st.plotly_chart(fig_map, use_container_width=True)
 
-    # ── Bar horizontal : top états par retard ───────────────
-    with col_right:
-        st.subheader("📊 Top 10 États — Taux de Retard")
-
+    with col_r:
+        section("Top 10 États — Taux de Retard")
         top_retard = geo.sort_values('taux_retard', ascending=True).tail(10)
-        colors_bar = [
-            COLORS['danger'] if v > 20 else
-            COLORS['warning'] if v > 10 else
-            COLORS['success']
+        bar_colors = [
+            C['red'] if v > 20 else
+            C['amber'] if v > 10 else
+            C['green']
             for v in top_retard['taux_retard']
         ]
-
-        fig_states = go.Figure(go.Bar(
+        fig_r = go.Figure(go.Bar(
             x=top_retard['taux_retard'],
             y=top_retard['customer_state'],
             orientation='h',
-            marker_color=colors_bar,
+            marker_color=bar_colors,
+            marker_opacity=0.85,
             text=[f"{v:.1f}%" for v in top_retard['taux_retard']],
             textposition='outside',
-            hovertemplate='%{y}<br>Retard : %{x:.1f}%<extra></extra>'
+            textfont=dict(size=11, color='#94a3b8'),
+            hovertemplate='%{y} — %{x:.1f}%<extra></extra>'
         ))
-        fig_states.update_layout(
-            height=420,
-            xaxis_title="Taux de retard (%)",
-            margin=dict(l=10, r=60, t=10, b=10),
-            showlegend=False
-        )
-        st.plotly_chart(fig_states, use_container_width=True)
+        apply_layout(fig_r, height=420,
+                     extra={
+                         'showlegend': False,
+                         'xaxis': dict(
+                             title='Taux de retard (%)',
+                             gridcolor='#1e2535',
+                             title_font=dict(size=11)
+                         ),
+                         'margin': dict(l=8, r=50, t=16, b=8)
+                     })
+        st.plotly_chart(fig_r, use_container_width=True)
 
-    # ── Scatter : délai vs score par état ───────────────────
-    st.subheader("📉 Délai Moyen vs Score Satisfaction — par État")
-
+    section("Délai Moyen vs Score Satisfaction — par État")
     fig_del = px.scatter(
-        geo,
-        x='delai_moyen',
-        y='review_moyen',
+        geo, x='delai_moyen', y='review_moyen',
         size='nb_commandes',
         color='taux_retard',
         hover_name='customer_state',
-        color_continuous_scale='RdYlGn_r',
+        color_continuous_scale=[
+            [0, '#22c55e'], [0.5, '#f59e0b'], [1, '#ef4444']
+        ],
         size_max=35,
+        text='customer_state',
         labels={
             'delai_moyen':  'Délai moyen (jours)',
-            'review_moyen': 'Score avis moyen',
-            'taux_retard':  'Taux retard (%)',
+            'review_moyen': 'Score satisfaction',
+            'taux_retard':  'Taux de retard (%)',
             'nb_commandes': 'Nb commandes'
-        },
-        text='customer_state'
+        }
     )
-    fig_del.update_traces(textposition='top center', textfont_size=10)
-    fig_del.add_hline(y=4.0, line_dash='dash', line_color=COLORS['success'],
-                      annotation_text="Cible score = 4.0")
-    fig_del.update_layout(
-        height=450,
-        margin=dict(l=10, r=10, t=30, b=10)
+    fig_del.update_traces(
+        textposition='top center',
+        textfont=dict(size=9, color='#64748b')
     )
+    fig_del.add_hline(
+        y=4.0, line_dash='dash',
+        line_color='#22c55e', opacity=0.4,
+        annotation_text="Cible score 4.0",
+        annotation_font=dict(size=10, color='#22c55e')
+    )
+    apply_layout(fig_del, height=440,
+                 extra={'margin': dict(l=8, r=8, t=16, b=8)})
     st.plotly_chart(fig_del, use_container_width=True)
 
 
 # ════════════════════════════════════════════════════════════
-# VUE 4 — PRODUITS : CATÉGORIES
+# VUE 3 — PRODUITS
 # ════════════════════════════════════════════════════════════
 elif vue_idx == 3:
 
-    st.title("📦 Vue Produits — Analyse par Catégories")
-    st.markdown("Performance commerciale et satisfaction client par catégorie de produit (Top 20)")
-    st.markdown("---")
+    page_header(
+        "Analyse par Catégorie",
+        "Performance par catégorie — Chiffre d'affaires, Satisfaction, Délais"
+    )
 
-    # ── Filtre interactif ────────────────────────────────────
-    nb_cat = st.slider("Nombre de catégories à afficher", 5, 20, 15)
+    nb_cat = st.slider("Nombre de categories", 5, 20, 15,
+                       label_visibility="collapsed")
+    st.markdown(
+        f"<div style='font-size:11px;color:#475569;margin:-8px 0 20px 0'>"
+        f"Affichage des {nb_cat} premières catégories par chiffre d'affaires</div>",
+        unsafe_allow_html=True
+    )
+
     cat_display = categories.head(nb_cat).copy()
 
     col_a, col_b = st.columns(2)
 
-    # ── Bar : revenue par catégorie ──────────────────────────
     with col_a:
-        st.subheader("💰 Revenue par Catégorie")
-
-        cat_sorted = cat_display.sort_values('revenue', ascending=True)
-        fig_rev = go.Figure(go.Bar(
-            x=cat_sorted['revenue'],
-            y=cat_sorted['product_category_name_english'],
+        section("Chiffre d'Affaires par Catégorie")
+        cat_r = cat_display.sort_values('revenue', ascending=True)
+        fig_rv = go.Figure(go.Bar(
+            x=cat_r['revenue'],
+            y=cat_r['product_category_name_english'],
             orientation='h',
-            marker_color=COLORS['primary'],
-            text=[f"R$ {v:,.0f}" for v in cat_sorted['revenue']],
+            marker_color=C['blue'],
+            marker_opacity=0.8,
+            text=[f"R$ {v:,.0f}" for v in cat_r['revenue']],
             textposition='outside',
-            hovertemplate='%{y}<br>Revenue : R$ %{x:,.0f}<extra></extra>'
+            textfont=dict(size=10, color='#94a3b8'),
+            hovertemplate='%{y}<br>R$ %{x:,.0f}<extra></extra>'
         ))
-        fig_rev.update_layout(
-            height=500,
-            xaxis_title="Revenue (BRL)",
-            margin=dict(l=10, r=80, t=10, b=10),
-            showlegend=False
-        )
-        st.plotly_chart(fig_rev, use_container_width=True)
+        apply_layout(fig_rv, height=520,
+                     extra={
+                         'showlegend': False,
+                         'xaxis': dict(
+                             title="Chiffre d'affaires (BRL)",
+                             gridcolor='#1e2535',
+                             title_font=dict(size=11)
+                         ),
+                         'margin': dict(l=8, r=80, t=16, b=8)
+                     })
+        st.plotly_chart(fig_rv, use_container_width=True)
 
-    # ── Bar : score moyen par catégorie ─────────────────────
     with col_b:
-        st.subheader("⭐ Score Satisfaction Moyen")
-
-        cat_score = cat_display.sort_values('review_moyen', ascending=True)
-        bar_colors = [
-            COLORS['success'] if v >= 4.0 else
-            COLORS['warning'] if v >= 3.5 else
-            COLORS['danger']
-            for v in cat_score['review_moyen']
+        section("Score de Satisfaction Moyen")
+        cat_s = cat_display.sort_values('review_moyen', ascending=True)
+        bar_c = [
+            C['green'] if v >= 4.0 else
+            C['amber'] if v >= 3.5 else
+            C['red']
+            for v in cat_s['review_moyen']
         ]
-
-        fig_score = go.Figure(go.Bar(
-            x=cat_score['review_moyen'],
-            y=cat_score['product_category_name_english'],
+        fig_sc = go.Figure(go.Bar(
+            x=cat_s['review_moyen'],
+            y=cat_s['product_category_name_english'],
             orientation='h',
-            marker_color=bar_colors,
-            text=[f"{v:.2f}" for v in cat_score['review_moyen']],
+            marker_color=bar_c,
+            marker_opacity=0.85,
+            text=[f"{v:.2f}" for v in cat_s['review_moyen']],
             textposition='outside',
+            textfont=dict(size=10, color='#94a3b8'),
             hovertemplate='%{y}<br>Score : %{x:.2f}<extra></extra>'
         ))
-        fig_score.add_vline(
-            x=4.0, line_dash='dash', line_color=COLORS['success'],
-            annotation_text="Cible = 4.0", annotation_position="top"
+        fig_sc.add_vline(
+            x=4.0, line_dash='dash',
+            line_color='#22c55e', opacity=0.4,
+            annotation_text="Cible 4.0",
+            annotation_font=dict(size=10, color='#22c55e'),
+            annotation_position="top"
         )
-        fig_score.update_layout(
-            height=500,
-            xaxis_title="Score Moyen (1–5)",
-            xaxis_range=[0, 5.5],
-            margin=dict(l=10, r=60, t=10, b=10),
-            showlegend=False
-        )
-        st.plotly_chart(fig_score, use_container_width=True)
+        apply_layout(fig_sc, height=520,
+                     extra={
+                         'showlegend': False,
+                         'xaxis': dict(
+                             title='Score satisfaction (1-5)',
+                             range=[0, 5.8],
+                             gridcolor='#1e2535',
+                             title_font=dict(size=11)
+                         ),
+                         'margin': dict(l=8, r=60, t=16, b=8)
+                     })
+        st.plotly_chart(fig_sc, use_container_width=True)
 
-    # ── Bubble : revenue vs retard vs score ─────────────────
-    st.subheader("🔵 Matrice Revenue × Retard × Satisfaction — par Catégorie")
-    st.caption("Taille des bulles = nombre de commandes | Couleur = score moyen")
-
-    fig_bubble = px.scatter(
+    section("Matrice CA × Retard × Satisfaction")
+    fig_bub = px.scatter(
         cat_display,
-        x='taux_retard',
-        y='review_moyen',
+        x='taux_retard', y='review_moyen',
         size='nb_commandes',
         color='review_moyen',
-        color_continuous_scale='RdYlGn',
+        color_continuous_scale=[
+            [0, '#ef4444'], [0.5, '#f59e0b'], [1, '#22c55e']
+        ],
         size_max=45,
         text='product_category_name_english',
         labels={
-            'taux_retard':  'Taux de Retard (%)',
-            'review_moyen': 'Score Satisfaction Moyen',
-            'nb_commandes': 'Nb Commandes',
-            'review_moyen': 'Score'
+            'taux_retard':  'Taux de retard (%)',
+            'review_moyen': 'Score satisfaction',
+            'nb_commandes': 'Nb commandes'
         },
-        hover_data={
-            'revenue': ':,.0f',
-            'nb_commandes': True,
-            'taux_retard': ':.1f',
-        }
+        hover_data={'revenue': ':,.0f', 'nb_commandes': True}
     )
-    fig_bubble.update_traces(textposition='top center', textfont_size=9)
-    fig_bubble.add_hline(y=4.0, line_dash='dash', line_color=COLORS['success'],
-                         annotation_text="Cible satisfaction")
-    fig_bubble.update_layout(
-        height=500,
-        coloraxis_colorbar=dict(title="Score"),
-        margin=dict(l=10, r=10, t=30, b=10)
+    fig_bub.update_traces(
+        textposition='top center',
+        textfont=dict(size=9, color='#64748b')
     )
-    st.plotly_chart(fig_bubble, use_container_width=True)
+    fig_bub.add_hline(
+        y=4.0, line_dash='dash',
+        line_color='#22c55e', opacity=0.4,
+        annotation_text="Cible satisfaction",
+        annotation_font=dict(size=10, color='#22c55e')
+    )
+    apply_layout(fig_bub, height=480,
+                 extra={'margin': dict(l=8, r=8, t=16, b=8)})
+    st.plotly_chart(fig_bub, use_container_width=True)
 
 
 # ════════════════════════════════════════════════════════════
-# VUE 5 — MODÈLE IA : PRÉDICTIONS & INTERPRÉTABILITÉ
+# VUE 4 — MODELE IA
 # ════════════════════════════════════════════════════════════
 elif vue_idx == 4:
 
-    st.title("🤖 Vue Modèle IA — Prédictions & Interprétabilité")
-    st.markdown("Modèle de classification : **prédire si une commande recevra un avis négatif (score ≤ 2)**")
-    st.markdown("---")
+    page_header(
+        "Modèle Prédictif",
+        "Classification binaire — prédiction des avis négatifs (score ≤ 2)"
+    )
 
-    # ── Tableau comparatif modèles ───────────────────────────
-    st.subheader("📊 Comparaison des 3 Modèles Entraînés")
+    # ── Tableau modeles ──────────────────────────────────────
+    section("Comparaison des 3 Modèles Entraînés")
+    col_t, col_m = st.columns([3, 1])
 
-    col_m1, col_m2 = st.columns([2, 1])
+    with col_t:
+        if 'Modèle' not in models_df.columns and 'model' in models_df.columns:
+            models_df.rename(columns={'model': 'Modele'}, inplace=True)
+        elif 'Modèle' in models_df.columns:
+            models_df.rename(columns={'Modèle': 'Modele'}, inplace=True)
 
-    with col_m1:
-        models_display = models_df.copy()
-        # Renommer si colonne s'appelle 'Modèle' ou 'model'
-        if 'Modèle' not in models_display.columns and 'model' in models_display.columns:
-            models_display = models_display.rename(columns={'model': 'Modèle'})
-
-        best_idx = models_display['AUC-ROC'].idxmax()
+        best_idx = models_df['AUC-ROC'].idxmax()
 
         def highlight_best(row):
-            return [
-                'background-color: #d1fae5; font-weight: bold'
-                if row.name == best_idx else ''
-            ] * len(row)
+            style = 'background-color:#1a2e1a;color:#22c55e;font-weight:500'
+            default = ''
+            return [style if row.name == best_idx else default] * len(row)
 
         st.dataframe(
-            models_display.style
+            models_df.style
                 .apply(highlight_best, axis=1)
                 .format({
                     'AUC-ROC':       '{:.4f}',
@@ -683,142 +951,170 @@ elif vue_idx == 4:
                     'CV AUC (std)':  '{:.4f}',
                 }),
             use_container_width=True,
-            height=160
+            height=155
         )
 
-    with col_m2:
-        best_model_name = models_display.loc[best_idx, 'Modèle'] \
-            if 'Modèle' in models_display.columns else 'Random Forest'
-        best_auc = models_display.loc[best_idx, 'AUC-ROC']
-
-        st.success(f"**Meilleur modèle** : {best_model_name}")
+    with col_m:
+        best_name = models_df.loc[best_idx, 'Modele'] \
+            if 'Modele' in models_df.columns else 'Random Forest'
+        best_auc  = models_df.loc[best_idx, 'AUC-ROC']
+        st.metric("Meilleur Modèle", best_name)
         st.metric("AUC-ROC", f"{best_auc:.4f}")
-        st.metric("Taux d'avis négatifs", "12.7%",
-                  help="Part des commandes avec score ≤ 2 dans le dataset")
-        st.caption("Validation : StratifiedKFold (3 folds)")
+        st.metric("Taux d'avis négatifs", "12.7%")
 
-    st.markdown("---")
+    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
-    # ── SHAP Feature Importance ──────────────────────────────
-    col_s1, col_s2 = st.columns(2)
+    col_s, col_i = st.columns(2)
 
-    with col_s1:
-        st.subheader("🔍 Importance des Features — SHAP (Top 10)")
-
+    # ── SHAP ─────────────────────────────────────────────────
+    with col_s:
+        section("Importance des Variables — SHAP (Top 10)")
         shap_top = shap_df.head(10).sort_values('importance', ascending=True)
-        bar_shap_colors = [
-            COLORS['danger']  if i >= 7 else
-            COLORS['warning'] if i >= 4 else
-            COLORS['neutral']
+        bar_shap = [
+            C['red']   if i >= 7 else
+            C['amber'] if i >= 4 else
+            C['slate']
             for i in range(len(shap_top))
         ]
-
-        fig_shap = go.Figure(go.Bar(
+        fig_sh = go.Figure(go.Bar(
             x=shap_top['importance'],
             y=shap_top['label'],
             orientation='h',
-            marker_color=bar_shap_colors,
+            marker_color=bar_shap,
+            marker_opacity=0.85,
             text=[f"{v:.3f}" for v in shap_top['importance']],
             textposition='outside',
-            hovertemplate='%{y}<br>Importance SHAP : %{x:.4f}<extra></extra>'
+            textfont=dict(size=10, color='#94a3b8'),
+            hovertemplate='%{y}<br>SHAP : %{x:.4f}<extra></extra>'
         ))
-        fig_shap.update_layout(
-            height=420,
-            xaxis_title="Importance SHAP moyenne absolue",
-            margin=dict(l=10, r=60, t=10, b=10),
-            showlegend=False
-        )
-        st.plotly_chart(fig_shap, use_container_width=True)
+        apply_layout(fig_sh, height=400,
+                     extra={
+                         'showlegend': False,
+                         'xaxis': dict(
+                             title='Importance SHAP (valeur absolue moyenne)',
+                             gridcolor='#1e2535',
+                             title_font=dict(size=11)
+                         ),
+                         'margin': dict(l=8, r=60, t=16, b=8)
+                     })
+        st.plotly_chart(fig_sh, use_container_width=True)
 
-    with col_s2:
-        st.subheader("💡 Interprétation Métier")
-
-        st.markdown("#### Principaux drivers des avis négatifs")
-
+    # ── Insights ─────────────────────────────────────────────
+    with col_i:
+        section("Interprétation Métier")
         insights = [
-            ("🔴", "Retard livraison", "delay_days",
-             "Le facteur #1. Chaque jour de retard augmente significativement la probabilité d'un avis négatif."),
-            ("🔴", "Durée totale livraison", "delivery_days",
-             "Même sans retard, une livraison longue dégrade la satisfaction."),
-            ("🟠", "Ratio frais de port", "freight_ratio",
-             "Quand les frais de port dépassent ~30% du prix produit, le client est déçu."),
-            ("🟡", "Valeur client RFM", "monetary",
-             "Les clients à forte valeur ont des attentes plus élevées."),
-            ("🟡", "Récence client", "recency",
-             "Les clients inactifs depuis longtemps sont plus critiques au retour."),
+            ("Retard livraison", "delay_days", C['red'],
+             "Facteur #1. Chaque jour de retard augmente "
+             "significativement la probabilite d'un avis negatif."),
+            ("Duree totale livraison", "delivery_days", C['red'],
+             "Meme sans retard, une livraison longue "
+             "degrade la satisfaction client."),
+            ("Ratio frais de port", "freight_ratio", C['amber'],
+             "Quand les frais depassent 30% du prix produit, "
+             "le client est systematiquement decu."),
+            ("Valeur client RFM", "monetary", C['amber'],
+             "Les clients a forte valeur ont des attentes "
+             "plus elevees et sont plus critiques."),
+            ("Recence client", "recency", C['slate'],
+             "Les clients inactifs depuis longtemps "
+             "sont plus critiques a leur retour."),
         ]
+        for label, feature, color, desc in insights:
+            with st.expander(label):
+                st.markdown(
+                    f"<div style='font-size:12px;color:#64748b;line-height:1.7'>"
+                    f"<span style='font-family:DM Mono,monospace;color:{color};"
+                    f"font-size:11px'>{feature}</span><br>{desc}</div>",
+                    unsafe_allow_html=True
+                )
 
-        for icon, label, feature, desc in insights:
-            with st.expander(f"{icon} {label}"):
-                st.markdown(f"**Feature** : `{feature}`")
-                st.markdown(desc)
-
-    # ── Recommandations actionnables ─────────────────────────
-    st.markdown("---")
-    st.subheader("🎯 3 Recommandations Actionnables — Priorisées")
-
+    # ── Recommandations ──────────────────────────────────────
+    section("Recommandations Actionnables — Priorisées")
     r1, r2, r3 = st.columns(3)
 
-    with r1:
-        st.error("#### 🥇 Priorité 1")
-        st.markdown("**Réduire les retards de livraison**")
-        st.markdown("""
-        - Identifier les vendeurs avec taux de retard > 20%
-        - Mettre en place des SLAs contractuels
-        - Alerte automatique à J+1 de retard
-        - **Impact estimé** : +0.4 point de score moyen
-        """)
-
-    with r2:
-        st.warning("#### 🥈 Priorité 2")
-        st.markdown("**Réactiver les clients À Risque**")
-        st.markdown("""
-        - Campagne email win-back sur les 3 028 clients fidèles inactifs
-        - Promo ciblée -15% sur leur catégorie préférée
-        - Délai : dans les 30 prochains jours
-        - **Impact estimé** : +2 à 3% de taux de rétention
-        """)
-
-    with r3:
-        st.info("#### 🥉 Priorité 3")
-        st.markdown("**Optimiser les frais de port**")
-        st.markdown("""
-        - Plafonner le freight_ratio à 25% du prix produit
-        - Négocier des tarifs logistiques pour les catégories à fort retard
-        - Afficher le délai estimé avant validation commande
-        - **Impact estimé** : +5% de conversion
-        """)
-
-    # ── AUC-ROC bar chart ────────────────────────────────────
-    st.markdown("---")
-    st.subheader("📈 AUC-ROC — Comparaison Visuelle")
-
-    model_names = models_display['Modèle'].tolist() \
-        if 'Modèle' in models_display.columns \
-        else ['Logistic Regression', 'Random Forest', 'XGBoost']
-
-    auc_values = models_display['AUC-ROC'].tolist()
-    auc_colors = [
-        COLORS['success'] if v == max(auc_values) else COLORS['neutral']
-        for v in auc_values
+    reco_data = [
+        (r1, C['red'],   "Priorite 1",
+         "Reduire les retards de livraison",
+         [
+             "Identifier les vendeurs avec retard > 20%",
+             "Mettre en place des SLAs contractuels",
+             "Alerte automatique a J+1 de retard",
+             "Impact estime : +0.4 point de score",
+         ]),
+        (r2, C['amber'], "Priorite 2",
+         "Réactiver les clients perdus",
+         [
+             "Campagne email win-back sur 3 028 clients",
+             "Promo -15% sur categorie preferee",
+             "Delai : sous 30 jours",
+             "Impact estime : +2 a 3% retention",
+         ]),
+        (r3, C['blue'],  "Priorite 3",
+         "Optimiser les frais de port",
+         [
+             "Plafonner freight_ratio a 25%",
+             "Negocier tarifs logistiques",
+             "Afficher delai estime avant validation",
+             "Impact estime : +5% conversion",
+         ]),
     ]
 
+    for col, color, priority, title, items in reco_data:
+        with col:
+            items_html = "".join(
+                f"<div style='display:flex;gap:6px;margin-bottom:5px'>"
+                f"<span style='color:{color};margin-top:1px'>—</span>"
+                f"<span>{item}</span></div>"
+                for item in items
+            )
+            st.markdown(
+                f"<div style='background:#161b27;border:1px solid #1e2535;"
+                f"border-top:2px solid {color};border-radius:10px;padding:18px 16px'>"
+                f"<div style='font-size:10px;color:{color};font-weight:500;"
+                f"text-transform:uppercase;letter-spacing:0.8px;"
+                f"margin-bottom:6px'>{priority}</div>"
+                f"<div style='font-size:13px;font-weight:600;color:#f1f5f9;"
+                f"margin-bottom:12px'>{title}</div>"
+                f"<div style='font-size:12px;color:#64748b;line-height:1.6'>"
+                f"{items_html}</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+    # ── AUC bar ──────────────────────────────────────────────
+    section("AUC-ROC — Comparaison des Modèles")
+    model_names = models_df['Modele'].tolist() \
+        if 'Modele' in models_df.columns \
+        else ['Logistic Regression', 'Random Forest', 'XGBoost']
+    auc_values = models_df['AUC-ROC'].tolist()
+    auc_colors = [
+        C['green'] if v == max(auc_values) else C['slate']
+        for v in auc_values
+    ]
     fig_auc = go.Figure(go.Bar(
-        x=model_names,
-        y=auc_values,
+        x=model_names, y=auc_values,
         marker_color=auc_colors,
+        marker_opacity=0.85,
         text=[f"{v:.4f}" for v in auc_values],
         textposition='outside',
+        textfont=dict(size=11, color='#94a3b8'),
         hovertemplate='%{x}<br>AUC-ROC : %{y:.4f}<extra></extra>'
     ))
     fig_auc.add_hline(
-        y=0.5, line_dash='dash', line_color=COLORS['danger'],
-        annotation_text="Aléatoire (0.5)", annotation_position="top left"
+        y=0.5, line_dash='dash',
+        line_color=C['red'], opacity=0.4,
+        annotation_text="Aleatoire (0.5)",
+        annotation_font=dict(size=10, color=C['red'])
     )
-    fig_auc.update_layout(
-        height=320,
-        yaxis=dict(title="AUC-ROC", range=[0.4, 0.8]),
-        margin=dict(l=10, r=10, t=30, b=10),
-        showlegend=False
-    )
+    apply_layout(fig_auc, height=300,
+                 extra={
+                     'showlegend': False,
+                     'yaxis': dict(
+                         title='AUC-ROC',
+                         range=[0.4, 0.8],
+                         gridcolor='#1e2535',
+                         title_font=dict(size=11)
+                     ),
+                     'margin': dict(l=8, r=8, t=16, b=8)
+                 })
     st.plotly_chart(fig_auc, use_container_width=True)
