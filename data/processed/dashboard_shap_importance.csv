@@ -1,0 +1,19 @@
+feature,importance,label
+delay_days,0.142,Retard livraison (jours)
+delivery_days,0.128,Durée totale livraison
+freight_ratio,0.089,Ratio frais de port / prix
+monetary,0.076,Valeur client RFM
+recency,0.068,Récence client RFM
+price,0.061,Prix de la commande
+freight_value,0.057,Frais de port
+revenue,0.049,Revenue total commande
+payment_installments,0.043,Nb de versements
+category_enc,0.038,Catégorie produit
+customer_state_enc,0.034,État client (géo)
+order_month_nb,0.029,Mois de commande
+cluster,0.024,Segment RFM
+is_late,0.021,Livraison en retard (binaire)
+order_hour,0.018,Heure de la commande
+payment_type_enc,0.015,Type de paiement
+order_dow,0.012,Jour de la semaine
+frequency,0.009,Fréquence client RFM

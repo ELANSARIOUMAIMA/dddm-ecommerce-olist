@@ -10,3 +10,5 @@ plotly==5.15.0
 xgboost>=1.7
 joblib>=1.2
 ipykernel
+streamlit>=1.32
+plotly>=5.18
