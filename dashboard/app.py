@@ -183,10 +183,6 @@ PLOTLY_LAYOUT = dict(
         yanchor='bottom',
         y=1.02
     ),
-    coloraxis_colorbar=dict(
-        tickfont=dict(color='#94a3b8'),
-        titlefont=dict(color='#94a3b8')
-    )
 )
 
 # Palette
