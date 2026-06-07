@@ -375,10 +375,12 @@ def page_header(title, subtitle=""):
     )
 
 def apply_layout(fig, height=380, extra=None):
-    layout = dict(PLOTLY_LAYOUT)
-    layout['height'] = height
-    if extra:
-        layout.update(extra)
+    # extra a toujours la priorite sur PLOTLY_LAYOUT
+    # on exclut du base toute cle presente dans extra pour eviter les doublons
+    extra = extra or {}
+    excluded = set(extra.keys()) | {'height'}
+    base = {k: v for k, v in PLOTLY_LAYOUT.items() if k not in excluded}
+    layout = {**base, 'height': height, **extra}
     fig.update_layout(**layout)
     return fig
 
